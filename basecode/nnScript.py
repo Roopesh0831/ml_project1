@@ -3,8 +3,6 @@ from scipy.optimize import minimize
 from scipy.io import loadmat
 from math import sqrt
 
-from sklearn.model_selection import train_test_split
-
 def initializeWeights(n_in, n_out):
     """
     # initializeWeights return the random weights for Neural Network given the
@@ -25,8 +23,9 @@ def initializeWeights(n_in, n_out):
 def sigmoid(z):
     """# Notice that z can be a scalar, a vector or a matrix
     # return the sigmoid of input z"""
+    # z = np.clip(z, -500, 500)
     sigmoid = 1 / (1 + np.exp(-z))
-    return sigmoid # your code here
+    return sigmoid
 
 
 def preprocess():
@@ -51,7 +50,7 @@ def preprocess():
      Some suggestions for preprocessing step:
      - feature selection"""
 
-    mat = loadmat('basecode/mnist_all.mat')  # loads the MAT object as a Dictionary
+    mat = loadmat('./ml_project1/basecode/mnist_all.mat')  # loads the MAT object as a Dictionary
 
     # Split the training sets into two sets of 50000 randomly sampled training examples and 10000 validation examples. 
     # Your code here.
@@ -74,13 +73,26 @@ def preprocess():
             test_data = np.concatenate((test_data, test_value), axis=0)
             test_label = np.concatenate((test_label, test_labels), axis=0)
 
-    # Split the training data into 50,000 for training and 10,000 for validation
-    train_data, validation_data, train_label, validation_label = train_test_split(
-        train_set, labels_set, test_size=(10000/60000), random_state=42)
-    
+    N = train_set.shape[0]
+    idx = np.arange(N)
+    np.random.seed(42)
+    np.random.shuffle(idx)
+    train_set = train_set[idx]
+    labels_set = labels_set[idx]
+
+    train_data = train_set[:50000]
+    train_label = labels_set[:50000]
+    validation_data = train_set[50000:]
+    validation_label = labels_set[50000:]
 
     # Feature selection
     # Your code here.
+    variance = np.var(train_data, axis=0)
+    selected_features = np.where(variance > 0)[0]
+    train_data = train_data[:, selected_features]
+    validation_data = validation_data[:, selected_features]
+    test_data = test_data[:, selected_features]
+
 
     print('preprocess done')
 
@@ -133,29 +145,35 @@ def nnObjFunction(params, *args):
 
     # Your code here
     N = training_data.shape[0]
+
+    #Feedforward Propagation__________________________________________________
     training_data_with_bias = np.column_stack((np.ones((N,)), training_data))
-    hidden_input = np.dot(training_data_with_bias, w1.T)
-    hidden_output = sigmoid(hidden_input)
+    hidden_layer_input = np.dot(training_data_with_bias, w1.T)
+    hidden_layer_output = sigmoid(hidden_layer_input)
 
-    hidden_output_with_bias = np.column_stack((np.ones((N,)), hidden_output))
-    output_input = np.dot(hidden_output_with_bias, w2.T)
-    output = sigmoid(output_input)
+    hidden_output_with_bias = np.column_stack((np.ones((N,)), hidden_layer_output))
+    output_layer_input = np.dot(hidden_output_with_bias, w2.T)
+    output = sigmoid(output_layer_input)
 
+
+    # Error and Regularization_________________________________________________
     y = np.zeros((N, n_class))
-    y[np.arange(N), training_label] = 1 # one-hot encoding
-
-    error = y * np.log(output) + (1 - y) * np.log(1 - output)
-    data_loss = -np.sum(error) / N
-
+    y[np.arange(N), training_label] = 1 
+    error = -np.sum(y * np.log(output) + (1 - y) * np.log(1 - output)) * (1 / N) 
+    # regularization = (lambdaval / (2 * N)) * (np.sum(w1 ** 2) + np.sum(w2 ** 2))
     regularization = (lambdaval / (2 * N)) * (np.sum(w1[:, 1:] ** 2) + np.sum(w2[:, 1:] ** 2))
-    obj_val = data_loss + regularization
+    obj_val = error + regularization
 
-    # Backpropagation
+    # Backpropagation_________________________________________________________
     delta_output = output - y
     grad_w2 = np.dot(delta_output.T, hidden_output_with_bias) / N
-    
-    delta_hidden = np.dot(delta_output, w2[:, 1:]) * hidden_output * (1 - hidden_output)
+    grad_w2[:, 1:] += (lambdaval / N) * w2[:, 1:]
+    # grad_w2 = (1/N) * (np.dot(delta_output.T, hidden_output_with_bias) + lambdaval * w2)
+
+    delta_hidden = np.dot(delta_output, w2[:, 1:]) * hidden_layer_output * (1 - hidden_layer_output)
     grad_w1 = np.dot(delta_hidden.T, training_data_with_bias) / N
+    grad_w1[:, 1:] += (lambdaval / N) * w1[:, 1:]
+    # grad_w1 = (1/N) * (np.dot(delta_hidden.T, training_data_with_bias) + lambdaval * w1)
 
     obj_grad = np.concatenate((grad_w1.flatten(), grad_w2.flatten()), 0)
 
@@ -196,42 +214,8 @@ def nnPredict(w1, w2, data):
     hidden_output_with_bias = np.column_stack((np.ones((N,)), hidden_output))
     output_input = np.dot(hidden_output_with_bias, w2.T)
     output = sigmoid(output_input)
-
     labels = np.argmax(output, axis=1)
     return labels
-
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
-import numpy as np
-
-def plot_sample_images(data, true_labels, pred_labels, num_samples=16):
-    """
-    Randomly select num_samples from the data and display them with their true and predicted labels.
-    Assumes that each row in data is a flattened image (28*28 = 784 features).
-    """
-    indices = np.random.choice(range(data.shape[0]), num_samples, replace=False)
-    fig, axes = plt.subplots(4, 4, figsize=(8,8))
-    axes = axes.ravel()
-    for i, idx in enumerate(indices):
-        img = data[idx].reshape(28,28)
-        axes[i].imshow(img, cmap='gray')
-        axes[i].set_title(f"True: {true_labels[idx]}\nPred: {pred_labels[idx]}")
-        axes[i].axis('off')
-    plt.tight_layout()
-    plt.show()
-
-def plot_confusion(true_labels, pred_labels):
-    """
-    Plot a confusion matrix using the true and predicted labels.
-    """
-    cm = confusion_matrix(true_labels, pred_labels)
-    plt.figure(figsize=(8,8))
-    plt.matshow(cm, cmap='Blues', fignum=1)
-    plt.colorbar()
-    plt.xlabel("Predicted")
-    plt.ylabel("True")
-    plt.title("Confusion Matrix", pad=20)
-    plt.show()
 
 
 """**************Neural Network Script Starts here********************************"""
@@ -245,7 +229,7 @@ if __name__ == "__main__":
     n_input = train_data.shape[1]
 
     # set the number of nodes in hidden unit (not including bias unit)
-    n_hidden = 50
+    n_hidden = 64
 
     # set the number of nodes in output unit
     n_class = 10
@@ -258,7 +242,7 @@ if __name__ == "__main__":
     initialWeights = np.concatenate((initial_w1.flatten(), initial_w2.flatten()), 0)
 
     # set the regularization hyper-parameter
-    lambdaval = 0
+    lambdaval = 400
 
     args = (n_input, n_hidden, n_class, train_data, train_label, lambdaval)
 
@@ -296,7 +280,5 @@ if __name__ == "__main__":
     # find the accuracy on Validation Dataset
 
     print('\n Test set Accuracy:' + str(100 * np.mean((predicted_label == test_label).astype(float))) + '%')
-    plot_sample_images(test_data, test_label, predicted_label)
-    plot_confusion(test_label, predicted_label)
 
 
