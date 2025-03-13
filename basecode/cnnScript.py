@@ -163,7 +163,8 @@ def test(dataloader, model, loss_fn, show_example_errors=False, show_confusion_m
 
     test_loss /= num_batches
     correct /= size
-    print(f"Test Error: \n Accuracy: {(100 * correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    accuracy = 100 * correct
+    print(f"Test Error: \n Accuracy: {accuracy:>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
     # Plot some examples of mis-classifications, if desired.
     if show_example_errors:
@@ -174,6 +175,8 @@ def test(dataloader, model, loss_fn, show_example_errors=False, show_confusion_m
     if show_confusion_matrix:
         print("Confusion Matrix:")
         plot_confusion_matrix(cls_pred=y_pred, cls_true=y_true)
+
+    return accuracy
 
 
 def optimize(iterations, train_dataloader, model, cost, optimizer):
@@ -190,7 +193,9 @@ def optimize(iterations, train_dataloader, model, cost, optimizer):
     time_dif = end_time - start_time
 
     # Print the time-usage.
-    print("Time usage: " + str(timedelta(seconds=int(round(time_dif)))))
+    time_usage = timedelta(seconds=int(round(time_dif)))
+    print(f"Time usage: {time_usage}")
+    return time_usage
 
 learning_rate = 1e-4
 train_batch_size = 64
@@ -213,17 +218,39 @@ testset = datasets.MNIST(root='./data', train=False, transform=transforms.ToTens
 train_dataloader = DataLoader(trainset, batch_size=train_batch_size, shuffle=True)
 test_dataloader = DataLoader(testset, batch_size=test_batch_size, shuffle=False)
 
-
+time_list = []
+epoch_list = []
 test(test_dataloader, model, cost)
-optimize(1, train_dataloader, model, cost, optimizer)
-test(test_dataloader, model, cost, True, True)
+time_usage = optimize(1, train_dataloader, model, cost, optimizer)
+time_usage_sec = time_usage.total_seconds() if hasattr(time_usage, 'total_seconds') else time_usage
+accuracy = test(test_dataloader, model, cost, True, True)
+time_list.append(time_usage_sec)
+epoch_list.append(1)
 
 # We already performed 1 iteration above.
-optimize(9, train_dataloader, model, cost, optimizer)
-test(test_dataloader, model, cost, show_example_errors=False)
+time_usage = optimize(9, train_dataloader, model, cost, optimizer)
+accuracy = test(test_dataloader, model, cost, show_example_errors=True)
+time_usage_sec = time_usage.total_seconds() if hasattr(time_usage, 'total_seconds') else time_usage
+time_list.append(time_usage_sec)
+epoch_list.append(9)
+
+#90 epochs
+time_usage = optimize(90, train_dataloader, model, cost, optimizer)
+accuracy = test(test_dataloader, model, cost, show_example_errors=True)
+time_usage_sec = time_usage.total_seconds() if hasattr(time_usage, 'total_seconds') else time_usage
+time_list.append(time_usage_sec)
+epoch_list.append(90)
 
 # optimize(900, train_dataloader, model, cost, optimizer)
 # test(test_dataloader, model, cost, show_example_errors=False)
 
 # optimize(9000, train_dataloader, model, cost, optimizer)
 # test(test_dataloader, model, cost, show_example_errors=False)
+
+import matplotlib.pyplot as plt
+plt.plot(epoch_list, time_list, marker='o', color='tab:blue')
+plt.xlabel("Epoch")
+plt.ylabel("Test Accuracy (%)")
+plt.title("Epoch vs. Test Accuracy")
+plt.grid(True)
+plt.show()
