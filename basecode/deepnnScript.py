@@ -22,20 +22,32 @@ def create_multilayer_perceptron():
             # Network Parameters
             n_hidden_1 = 256  # 1st layer number of features
             n_hidden_2 = 256  # 2nd layer number of features
-            n_hidden_3 = 256  # 3rd layer number of features
+            # n_hidden_3 = 128  # 3rd layer number of features
+            # n_hidden_4 = 64  # 4th layer number of features    
+            # n_hidden_5 = 32  # 5th layer number of features
+            # n_hidden_6 = 16  # 6th layer number of features
+            # n_hidden_7 = 8  # 7th layer number of features
             n_input = 2376  # data input
             n_classes = 2
 
             # Initialize network layers
             self.layer_1 = nn.Linear(n_input, n_hidden_1)
             self.layer_2 = nn.Linear(n_hidden_1, n_hidden_2)
-            self.layer_3 = nn.Linear(n_hidden_2, n_hidden_3)
-            self.out_layer = nn.Linear(n_hidden_3, n_classes)
+            # self.layer_3 = nn.Linear(n_hidden_2, n_hidden_3)
+            # self.layer_4 = nn.Linear(n_hidden_3, n_hidden_4)
+            # self.layer_5 = nn.Linear(n_hidden_4, n_hidden_5)
+            # self.layer_6 = nn.Linear(n_hidden_5, n_hidden_6)
+            # self.layer_7 = nn.Linear(n_hidden_6, n_hidden_7)
+            self.out_layer = nn.Linear(n_hidden_2, n_classes)
 
         def forward(self, x):
             x = F.relu(self.layer_1(x))
             x = F.relu(self.layer_2(x))
-            x = F.relu(self.layer_3(x))
+            # x = F.relu(self.layer_3(x))
+            # x = F.relu(self.layer_4(x))
+            # x = F.relu(self.layer_5(x))
+            # x = F.relu(self.layer_6(x))
+            # x = F.relu(self.layer_7(x))
             x = self.out_layer(x)
             return x
 
@@ -43,7 +55,7 @@ def create_multilayer_perceptron():
 
 # Do not change this
 def preprocess():
-    pickle_obj = pickle.load(file=open('./basecode/face_all.pickle', 'rb'))
+    pickle_obj = pickle.load(file=open('./ml_project1/basecode/face_all.pickle', 'rb'))
     features = pickle_obj['Features']
     labels = pickle_obj['Labels']
     train_x = features[0:21100] / 255
@@ -110,9 +122,9 @@ def test(dataloader, model, loss_fn):
 
 
 # Parameters
-learning_rate = 0.0001
-training_epochs = 50
-batch_size = 100
+learning_rate = 0.0002
+training_epochs = 100
+batch_size = 10
 
 # Get cpu or gpu device for training.
 device = "cuda" if torch.cuda.is_available() else "cpu"
