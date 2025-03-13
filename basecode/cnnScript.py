@@ -220,11 +220,13 @@ test_dataloader = DataLoader(testset, batch_size=test_batch_size, shuffle=False)
 
 time_list = []
 epoch_list = []
+accuracy_list = []
 test(test_dataloader, model, cost)
 time_usage = optimize(1, train_dataloader, model, cost, optimizer)
 time_usage_sec = time_usage.total_seconds() if hasattr(time_usage, 'total_seconds') else time_usage
 accuracy = test(test_dataloader, model, cost, True, True)
 time_list.append(time_usage_sec)
+accuracy_list.append(accuracy)
 epoch_list.append(1)
 
 # We already performed 1 iteration above.
@@ -232,13 +234,15 @@ time_usage = optimize(9, train_dataloader, model, cost, optimizer)
 accuracy = test(test_dataloader, model, cost, show_example_errors=True)
 time_usage_sec = time_usage.total_seconds() if hasattr(time_usage, 'total_seconds') else time_usage
 time_list.append(time_usage_sec)
+accuracy_list.append(accuracy)
 epoch_list.append(9)
 
-#90 epochs
+# 90 epochs
 time_usage = optimize(90, train_dataloader, model, cost, optimizer)
 accuracy = test(test_dataloader, model, cost, show_example_errors=True)
 time_usage_sec = time_usage.total_seconds() if hasattr(time_usage, 'total_seconds') else time_usage
 time_list.append(time_usage_sec)
+accuracy_list.append(accuracy)
 epoch_list.append(90)
 
 # optimize(900, train_dataloader, model, cost, optimizer)
@@ -248,9 +252,20 @@ epoch_list.append(90)
 # test(test_dataloader, model, cost, show_example_errors=False)
 
 import matplotlib.pyplot as plt
+plt.subplot(2, 1, 1)
 plt.plot(epoch_list, time_list, marker='o', color='tab:blue')
 plt.xlabel("Epoch")
-plt.ylabel("Test Accuracy (%)")
-plt.title("Epoch vs. Test Accuracy")
+plt.ylabel("Time (seconds)")
+plt.title('Time vs. Epoch')
+plt.grid(True)
+
+plt.subplot(2, 1, 2)
+plt.plot(epoch_list, accuracy_list, marker='o', color='tab:orange')
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy (%)")
+plt.title('Accuracy vs. Epoch')
+plt.grid(True)
+plt.suptitle('Time and Accuracy vs. Epoch - (CPU)')
+
 plt.grid(True)
 plt.show()
